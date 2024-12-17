@@ -2,6 +2,7 @@ from django.shortcuts import render
 import sqlite3
 import pandas as pd
 from transactions.models import Account
+from django.db import transaction
 
 class ImportData:
     def __init__(self, file="accounts.csv"):
@@ -13,19 +14,22 @@ class ImportData:
             except FileNotFoundError:
                 print(f"Error: File '{self.csv_file}' not found")
                 return
-            
-            for _,row in df.iterrows():
-                id = row['ID']
-                name = row['Name']
-                balance = row['Balance']
-                
-                if self.checkDuplicates(id):
-                    if self.checkBalance(id,balance):
-                        continue
-                    else:
-                        self.updateBalance(id,balance)
-                else:
-                    self.addAccounts(id, name, balance)
+            try:
+                with transaction.atomic():
+                    for _,row in df.iterrows():
+                        id = row['ID']
+                        name = row['Name']
+                        balance = row['Balance']
+                        
+                        if self.checkDuplicates(id):
+                            if self.checkBalance(id,balance):
+                                continue
+                            else:
+                                self.updateBalance(id,balance)
+                        else:
+                            self.addAccounts(id, name, balance)
+            except Exception as e:
+                print(f"transaction failed {e}")
     
     # checking for a duplicate
     def checkDuplicates(self,id):
