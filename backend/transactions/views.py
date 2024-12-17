@@ -6,6 +6,8 @@ from django.db import transaction
 from django.views import View
 from django.http import JsonResponse
 import io
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
 class ImportData:
     def __init__(self, file):
@@ -19,6 +21,7 @@ class ImportData:
                 'new_accounts': 0,
                 'updated_accounts': 0,
                 'unchanged_accounts': 0,
+                
             }
             
                 try:
@@ -81,7 +84,8 @@ class ImportData:
 
     def addAccounts(self,id,name,balance):
         Account.objects.create(id=id, name=name, balance=balance)
-#
+        
+@method_decorator(csrf_exempt, name='dispatch')
 class ImportDataView(View):
     def post(self, request):
         if 'file' not in request.FILES:
@@ -101,4 +105,4 @@ class ImportDataView(View):
         importer = ImportData(csv_file)
         result = importer.import_and_update_csv()
         
-        return JsonResponse(result)
+        return JsonResponse(result, safe=False)

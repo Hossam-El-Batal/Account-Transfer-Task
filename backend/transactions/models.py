@@ -2,7 +2,7 @@ from django.db import models
 
 
 class Account(models.Model):
-    id = models.IntegerField(primary_key=True, null=False)
+    id = models.UUIDField(primary_key=True, null=False)
     name = models.CharField(max_length=255)
     balance = models.FloatField()
 
