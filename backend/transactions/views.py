@@ -81,3 +81,24 @@ class ImportData:
 
     def addAccounts(self,id,name,balance):
         Account.objects.create(id=id, name=name, balance=balance)
+#
+class ImportDataView(View):
+    def post(self, request):
+        if 'file' not in request.FILES:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'No file uploaded'
+            }, status=400)
+            
+        csv_file = request.FILES['file']
+        
+        if not csv_file.name.endswith('.csv'):
+            return JsonResponse({
+                'status': 'error',
+                'message': 'File must be a CSV format'
+            }, status=400)
+
+        importer = ImportData(csv_file)
+        result = importer.import_and_update_csv()
+        
+        return JsonResponse(result)
