@@ -12,8 +12,9 @@ class ImportData:
                 df = pd.read_csv(self.csv_file)
             except FileNotFoundError:
                 print(f"Error: File '{self.csv_file}' not found")
+                return
             
-            for row in df.iterrows():
+            for _,row in df.iterrows():
                 id = row['ID']
                 name = row['Name']
                 balance = row['Balance']
@@ -26,13 +27,25 @@ class ImportData:
                 else:
                     self.addAccounts(id, name, balance)
     
+    # checking for a duplicate
     def checkDuplicates(self,id):
-        pass
+        return Account.objects.filter(id=id).exists()
+    # checking balance incase of a duplicate
+    def checkBalance(self,id,new_balance):
+        try:
+            account = Account.objects.get(id=id)
+            return account.balance == new_balance
+        except Account.DoesNotExist:
+            print(f"Error: Account with id {id} does not exist")
+            return False
+    def updateBalance(self,id,new_balance):
+        try:
+            account = Account.objects.get(id=id)
+            account.balance = new_balance
+            account.save()
+        except Account.DoesNotExist:
+            print(f"Error: Account with ID {id} not found for update") 
+            
+
     def addAccounts(self,id,name,balance):
-        pass
-    def checkBalance(self,id,balance):
-        pass
-    def updateBalance(self,id,balance):
-        pass
-    
-        
+        Account.objects.create(id=id, name=name, balance=balance)
