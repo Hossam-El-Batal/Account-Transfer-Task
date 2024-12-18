@@ -8,6 +8,8 @@ from django.http import JsonResponse
 import io
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
+from django.core.paginator import Paginator
+
 
 class ImportData:
     def __init__(self, file):
@@ -21,7 +23,6 @@ class ImportData:
                 'new_accounts': 0,
                 'updated_accounts': 0,
                 'unchanged_accounts': 0,
-                
             }
             
                 try:
@@ -106,3 +107,41 @@ class ImportDataView(View):
         result = importer.import_and_update_csv()
         
         return JsonResponse(result, safe=False)
+    
+    
+## return account info 
+@method_decorator(csrf_exempt, name='dispatch')
+class ShowBalance(View):
+    def get(self,request,id):
+        try:
+            account = Account.objects.get(id=id)
+            return JsonResponse({'Name': account.name, 'balance': account.balance}, status=200)
+        except Account.DoesNotExist:
+            return JsonResponse({'error': 'account not found'}, status=404)
+        
+## return all accounts info
+@method_decorator(csrf_exempt, name='dispatch')
+class ListAccounts(View):
+    def get(self,request):
+        try:
+            accounts = Account.objects.all()  
+
+            page_number = request.GET.get('page', 1)
+            page_size = request.GET.get('page_size', 10) 
+            paginator = Paginator(accounts, page_size)
+            page = paginator.get_page(page_number)
+            
+            accounts_data = [
+                {'id': account.id, 'name': account.name, 'balance': account.balance}
+                for account in page
+            ]
+            return JsonResponse({
+                'accounts': accounts_data,
+                'total_pages': paginator.num_pages,
+                'current_page': page.number,
+                'total_count': paginator.count
+            }, status=200)
+        
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
