@@ -9,6 +9,8 @@ import io
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.core.paginator import Paginator
+import json
+
 
 
 class ImportData:
@@ -145,3 +147,37 @@ class ListAccounts(View):
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
 
+## transfer funds between accounts ! 
+@method_decorator(csrf_exempt, name='dispatch')
+class TransferFunds(View):
+    def post(self,request):
+        data = json.loads(request.body)
+        sender_id = data.get('sender_id')
+        receiver_id = data.get('receiver_id')
+        amount = data.get('amount')
+        
+        if not sender_id or not receiver_id or not amount:
+            return JsonResponse({'error': 'Missing fields'}, status=400)
+
+        try:
+            sender = Account.objects.get(id=sender_id)
+            receiver = Account.objects.get(id=receiver_id)
+        except Account.DoesNotExist:
+            return JsonResponse({'error': 'sender or reciever account does not exist'}, status=404)
+
+        if sender.balance < amount:
+            return JsonResponse({'error': 'not enough funds'}, status=400)
+
+        try:
+            with transaction.atomic():
+                sender.balance -= amount
+                sender.save()
+
+                receiver.balance += amount
+                receiver.save()
+
+            return JsonResponse({'message': 'Transfer successful'}, status=200)
+
+        except Exception as e:
+            return JsonResponse({'error': f'Transfer failed: {str(e)}'}, status=500)
+        
