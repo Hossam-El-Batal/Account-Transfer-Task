@@ -90,6 +90,8 @@ class ImportData:
         
 @method_decorator(csrf_exempt, name='dispatch')
 class ImportDataView(View):
+    def get(self, request):
+        return render(request, 'transactions/import_accounts.html')
     def post(self, request):
         if 'file' not in request.FILES:
             return JsonResponse({
@@ -117,7 +119,9 @@ class ShowBalance(View):
     def get(self,request,id):
         try:
             account = Account.objects.get(id=id)
-            return JsonResponse({'Name': account.name, 'balance': account.balance}, status=200)
+            return render(request, 'transactions/show_balance.html', {
+                'account': account
+            })
         except Account.DoesNotExist:
             return JsonResponse({'error': 'account not found'}, status=404)
         
@@ -137,12 +141,14 @@ class ListAccounts(View):
                 {'id': account.id, 'name': account.name, 'balance': account.balance}
                 for account in page
             ]
-            return JsonResponse({
-                'accounts': accounts_data,
-                'total_pages': paginator.num_pages,
+            return render(request, 'transactions/list_accounts.html', {
+                'accounts': page,
                 'current_page': page.number,
-                'total_count': paginator.count
-            }, status=200)
+                'total_pages': paginator.num_pages,
+                'has_previous': page.has_previous(),
+                'has_next': page.has_next(),
+                'page_range': paginator.get_elided_page_range(page.number, on_each_side=2, on_ends=1)
+            })
         
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
@@ -150,6 +156,11 @@ class ListAccounts(View):
 ## transfer funds between accounts ! 
 @method_decorator(csrf_exempt, name='dispatch')
 class TransferFunds(View):
+    def get(self, request):
+        accounts = Account.objects.all().order_by('name')
+        return render(request, 'transactions/transfer_funds.html', {
+            'accounts': accounts
+        })
     def post(self,request):
         data = json.loads(request.body)
         sender_id = data.get('sender_id')
